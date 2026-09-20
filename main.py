@@ -389,7 +389,7 @@ class Client:
             'ywp_mst_game_const': GAME_CONST,
         }
 
-    def battle(self, stageId, battleType=None, wait=2.0):
+    def battle(self, stageId, battleType=None, wait=7.5):
         if battleType is None:
             battleType = 6 if str(stageId).startswith(('28805', '28904', '29008', '29304')) else 1
         rc, js = self.call('gameStart.nhn', {'stageId': stageId, 'battleType': battleType,
