@@ -1,10 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-ぷにぷに 対話型自動周回スクリプト（ハイブリッド設定版）
-メール/パスワードは .env から読み込み、周回設定はコード内で直接指定します
-"""
-
 import base64
 import hashlib
 import json
