@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ぷにぷに 対話型自動周回スクリプト（環境変数対応版）
-メール/パスワードをenvから読み込み → UDkey自動取得 → ステージ自動周回
+ぷにぷに 対話型自動周回スクリプト（ハイブリッド設定版）
+メール/パスワードは .env から読み込み、周回設定はコード内で直接指定します
 """
 
 import base64
@@ -18,8 +18,18 @@ from Crypto.Cipher import AES
 import requests
 from dotenv import load_dotenv
 
-# .envファイルから環境変数を読み込む
+# .envファイルから環境変数を読み込む（メール・パスワード用）
 load_dotenv()
+
+# ============================================================================
+# 【ユーザー設定エリア】 周回設定はここで変更してください
+# ============================================================================
+
+# 周回設定
+PUNIPUNI_STAGE_ID = 29704006                    # 周回したいステージのID
+PUNIPUNI_COUNT = 1000                          # 周回回数
+PUNIPUNI_REQUEST_DELAY = 10                 # リクエスト前の待機時間（秒）
+PUNIPUNI_COOLDOWN = 10                      # バトル間のクールダウン（秒）
 
 # ============================================================================
 # 定数設定
@@ -111,7 +121,6 @@ def jbody(obj):
 # ============================================================================
 
 def post_nhn(name, obj, timeout=30, retry=3):
-    """API呼び出し（リトライ機能付き）"""
     for attempt in range(1, retry + 1):
         try:
             r = requests.post('%s/%s' % (GS, name), data=enc(jbody(obj)),
@@ -125,7 +134,7 @@ def post_nhn(name, obj, timeout=30, retry=3):
             
             try:
                 out = dec(r.text)
-            except Exception as e:
+            except Exception:
                 if attempt < retry:
                     time.sleep(2 ** attempt)
                     continue
@@ -176,7 +185,6 @@ def _parse_forms(html):
     return out
 
 def link_email(udkey, email, pw, timeout=25):
-    """udkeyにメール/パスを連携(L5 OAuth)"""
     s = requests.Session()
     s.headers.update({'User-Agent': UA, 'Accept': 'text/html,application/xhtml+xml,*/*;q=0.8',
                       'Accept-Language': 'ja'})
@@ -437,41 +445,30 @@ def login_email(email, pw, userId=None):
 
 def main():
     print('=' * 70)
-    print('   ぷにぷに 自動周回スクリプト（環境変数設定版）')
+    print('   ぷにぷに 自動周回スクリプト（ハイブリッド設定版）')
     print('=' * 70)
     print()
 
-    # 環境変数から設定を読み込む
+    # .env からメールとパスワードを取得
     email = os.getenv('PUNIPUNI_EMAIL')
-    pw = os.getenv('PUNIPUNI_PASSWORD', '123qwe')
-    
-    try:
-        stage_id = int(os.getenv('PUNIPUNI_STAGE_ID', '0'))
-        count = int(os.getenv('PUNIPUNI_COUNT', '10'))
-        request_delay = float(os.getenv('PUNIPUNI_REQUEST_DELAY', '0.5'))
-        cooldown = float(os.getenv('PUNIPUNI_COOLDOWN', '3.0'))
-    except ValueError:
-        print('✗ 環境変数の数値変換に失敗しました。.envファイルの設定を確認してください。')
-        return 1
+    pw = os.getenv('PUNIPUNI_PASSWORD', '')
 
-    if not email or stage_id == 0:
-        print('✗ エラー: 環境変数「PUNIPUNI_EMAIL」または「PUNIPUNI_STAGE_ID」が設定されていません。')
-        print('  スクリプトと同階層に .env ファイルを作成するか、環境変数を設定してください。')
+    if not email:
+        print('✗ エラー: 環境変数「PUNIPUNI_EMAIL」が設定されていません。')
+        print('  スクリプトと同階層に .env ファイルを作成してください。')
         print()
         print('  【.env ファイルの記述例】')
         print('  PUNIPUNI_EMAIL=your_email@example.com')
         print('  PUNIPUNI_PASSWORD=your_password')
-        print('  PUNIPUNI_STAGE_ID=10101')
-        print('  PUNIPUNI_COUNT=10')
         return 1
 
     print('【設定確認】')
     print('-' * 70)
-    print(f'   メール: {email}')
-    print(f'   ステージID: {stage_id}')
-    print(f'   周回回数: {count}回')
-    print(f'   リクエスト前待機: {request_delay}秒 (±30%でランダム変動)')
-    print(f'   クールダウン: {cooldown}秒 (±30%でランダム変動)')
+    print(f'   メール (.env): {email}')
+    print(f'   ステージID (コード内): {PUNIPUNI_STAGE_ID}')
+    print(f'   周回回数 (コード内): {PUNIPUNI_COUNT}回')
+    print(f'   リクエスト前待機: {PUNIPUNI_REQUEST_DELAY}秒 (±30%でランダム変動)')
+    print(f'   クールダウン: {PUNIPUNI_COOLDOWN}秒 (±30%でランダム変動)')
     print()
 
     print('【1/2】ログイン処理')
@@ -498,31 +495,31 @@ def main():
         return 1
 
     stages = c.stages()
-    if stage_id not in stages:
-        print(f'✗ ステージID {stage_id} はクリアされていないか見つかりません')
+    if PUNIPUNI_STAGE_ID not in stages:
+        print(f'✗ ステージID {PUNIPUNI_STAGE_ID} はクリアされていないか見つかりません')
         return 1
 
     print('【2/2】自動周回開始')
     print('-' * 70)
-    print(f'ステージ: {stage_id}')
+    print(f'ステージ: {PUNIPUNI_STAGE_ID}')
     print()
 
     success_count = 0
     fail_count = 0
     start_time = time.time()
 
-    for i in range(1, count + 1):
-        randomized_request_delay = request_delay * random.uniform(0.7, 1.3)
-        randomized_cooldown = cooldown * random.uniform(0.7, 1.3)
+    for i in range(1, PUNIPUNI_COUNT + 1):
+        randomized_request_delay = PUNIPUNI_REQUEST_DELAY * random.uniform(0.7, 1.3)
+        randomized_cooldown = PUNIPUNI_COOLDOWN * random.uniform(0.7, 1.3)
 
-        print(f'[{i}/{count}] リクエスト前待機中 ({randomized_request_delay:.1f}秒)...', end='', flush=True)
+        print(f'[{i}/{PUNIPUNI_COUNT}] リクエスト前待機中 ({randomized_request_delay:.1f}秒)...', end='', flush=True)
         time.sleep(randomized_request_delay)
         print(' 完了')
 
-        print(f'[{i}/{count}] バトル実行中...', end='', flush=True)
+        print(f'[{i}/{PUNIPUNI_COUNT}] バトル実行中...', end='', flush=True)
 
         try:
-            rc, result = c.battle(stage_id)
+            rc, result = c.battle(PUNIPUNI_STAGE_ID)
             result_code = result.get('resultCode')
 
             if result_code == 0:
@@ -544,7 +541,7 @@ def main():
             print(f' ✗ 例外エラー: {str(e)[:60]}')
             fail_count += 1
 
-        if i < count:
+        if i < PUNIPUNI_COUNT:
             print(f'   → {randomized_cooldown:.1f}秒 待機中...', end='', flush=True)
             time.sleep(randomized_cooldown)
             print(' 完了')
@@ -558,10 +555,10 @@ def main():
     print(f'実行時間: {elapsed_time:.1f}秒')
     print(f'成功: {success_count}回')
     print(f'失敗: {fail_count}回')
-    print(f'成功率: {success_count / count * 100:.1f}%' if count > 0 else '成功率: N/A')
+    print(f'成功率: {success_count / PUNIPUNI_COUNT * 100:.1f}%' if PUNIPUNI_COUNT > 0 else '成功率: N/A')
     print()
 
-    if success_count == count:
+    if success_count == PUNIPUNI_COUNT:
         print('✓ すべてのバトルが成功しました！')
     elif success_count > 0:
         print(f'⚠ {fail_count}回のバトルが失敗しました')
