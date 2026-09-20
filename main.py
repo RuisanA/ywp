@@ -21,8 +21,8 @@ load_dotenv()
 # 周回設定
 PUNIPUNI_STAGE_ID = 29704006                    # 周回したいステージのID
 PUNIPUNI_COUNT = 1000                          # 周回回数
-PUNIPUNI_REQUEST_DELAY = 7                 # リクエスト前の待機時間（秒）
-PUNIPUNI_COOLDOWN = 7                      # バトル間のクールダウン（秒）
+PUNIPUNI_REQUEST_DELAY = 10                 # リクエスト前の待機時間（秒）
+PUNIPUNI_COOLDOWN = 10                      # バトル間のクールダウン（秒）
 
 # ============================================================================
 # 定数設定
