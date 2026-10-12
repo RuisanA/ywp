@@ -41,7 +41,7 @@ L5 = 'https://api.level5-id.com'
 
 MODEL = 'GA00747-UK'
 OSVER = '9'
-APPVER = '4.174.0'
+APPVER = '4.175.0'
 BATTERY = {'level': 100, 'state': 3, 'technology': 'Li-poly', 'temperature': 261, 'voltage': 4300}
 
 UA = 'Dalvik/2.1.0 (Linux; U; Android %s; %s Build/PI) com.Level5.YWP/%s' % (OSVER, MODEL, APPVER)
